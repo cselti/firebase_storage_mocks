@@ -90,11 +90,6 @@ class MockReference extends Mock implements Reference {
     return Future.value(_storage.storedDataMap[_path]);
   }
 
-  /*@override
-  Future<String> getDownloadURL() {
-    return Future.value(fullPath.substring(0, fullPath.length - 1));
-  }*/
-
   @override
   Future<FullMetadata> updateMetadata(SettableMetadata metadata) {
     // ignore: omit_local_variable_types
