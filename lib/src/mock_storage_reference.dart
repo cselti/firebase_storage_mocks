@@ -110,9 +110,16 @@ class MockReference extends Mock implements Reference {
     newMetadata['name'] = _storage.storedMetadata[_path]?.name ?? name;
     newMetadata['size'] = _storage.storedMetadata[_path]?.size
         ?? _storage.storedDataMap[_path]?.lengthInBytes ?? _storage.storedFilesMap[_path]!.lengthSync();
-    newMetadata['creationTimeMillis'] = _storage.storedMetadata[_path]?.timeCreated?.millisecondsSinceEpoch
+    int? timestamp;
+    if (metadata?.customMetadata != null)  {
+      timestamp = int.tryParse(metadata!.customMetadata!['creationTimeMillis'] ?? 'null');
+    }
+    newMetadata['creationTimeMillis'] = timestamp ?? _storage.storedMetadata[_path]?.timeCreated?.millisecondsSinceEpoch
         ?? DateTime.now().millisecondsSinceEpoch;
-    newMetadata['updatedTimeMillis'] = DateTime.now().millisecondsSinceEpoch;
+    if (metadata?.customMetadata != null)  {
+      timestamp = int.tryParse(metadata!.customMetadata!['updatedTimeMillis'] ?? 'null');
+    }
+    newMetadata['updatedTimeMillis'] = timestamp ?? DateTime.now().millisecondsSinceEpoch;
     return FullMetadata(newMetadata);
   }
 
