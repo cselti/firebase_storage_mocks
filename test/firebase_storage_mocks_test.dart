@@ -47,10 +47,8 @@ void main() {
     test('Writes file', () async {
       final storage = MockFirebaseStorage();
       final storageRef = storage.ref('test');
-      final image = File(imagefile);
-      final text = File(textfile);
-      await storageRef.putFile(image);
-      await storageRef.putFile(text);
+      await storageRef.putFile(File(imagefile));
+      await storageRef.putFile(File(textfile));
       final targetImage = File('${Directory.systemTemp.path}/$imagefile');
       final targetText = File('${Directory.systemTemp.path}/$textfile');
       await storageRef.writeToFile(targetImage);
@@ -80,7 +78,7 @@ void main() {
     });
 
     test('Set, get and update metadata', () async {
-      final storage = MockFirebaseStorage();
+      final storage = MockFirebaseStorage(calculateMd5Hash: true);
       final storageRef = storage.ref().child(imagefile);
       final image = File(imagefile);
       await storageRef.putFile(image);
@@ -107,7 +105,7 @@ void main() {
         cacheControl: 'max-age=60',
         customMetadata: <String, String>{
           'userId': 'ABC123',
-          'md5Hash': 'md5Hash',
+          'md5Hash': '12345',
           'creationTimeMillis': '${now.millisecondsSinceEpoch}',
           'updatedTimeMillis': '${now.millisecondsSinceEpoch}',
         },
@@ -116,9 +114,21 @@ void main() {
 
       expect(metadata2.cacheControl, equals('max-age=60'));
       expect(metadata2.contentType, equals('image/png'));
-      expect(metadata2.md5Hash, equals('md5Hash'));
+      expect(metadata2.md5Hash, equals('12345'));
       expect(metadata2.timeCreated, equals(DateTime.fromMillisecondsSinceEpoch(now.millisecondsSinceEpoch)));
       expect(metadata2.updated, equals(DateTime.fromMillisecondsSinceEpoch(now.millisecondsSinceEpoch)));
+    });
+
+    test('Throws error on download', () async {
+      final storage = MockFirebaseStorage(throwsDownloadException: true);
+      var storageRef = storage.ref('test').child(imagefile.split('/')[1]);
+      final imageData = Uint8List(256);
+      await storageRef.putData(imageData);
+      expect(() async => await storageRef.getData(), throwsException);
+      storageRef = storage.ref('test');
+      await storageRef.putFile(File(imagefile));
+      final targetImage = File('${Directory.systemTemp.path}/$imagefile');
+      expect(() async => await storageRef.writeToFile(targetImage), throwsException);
     });
   });
 }
