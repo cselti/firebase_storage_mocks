@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_storage_mocks/firebase_storage_mocks.dart';
 import 'package:mockito/mockito.dart';
@@ -24,14 +25,14 @@ class MockReference extends Mock implements Reference {
   @override
   UploadTask putFile(File file, [SettableMetadata? metadata]) {
     _storage.storedFilesMap[_path] = file;
-    _storage.storedMetadata[_path] = _createFullMetadata(metadata);
+    _createFullMetadata(metadata).then((value) => _storage.storedMetadata[_path] = value);
     return MockUploadTask(this);
   }
 
   @override
   UploadTask putData(Uint8List data, [SettableMetadata? metadata]) {
     _storage.storedDataMap[_path] = data;
-    _storage.storedMetadata[_path] = _createFullMetadata(metadata);
+    _createFullMetadata(metadata).then((value) => _storage.storedMetadata[_path] = value);
     return MockUploadTask(this);
   }
 
@@ -104,34 +105,35 @@ class MockReference extends Mock implements Reference {
   }
 
   @override
-  Future<FullMetadata> updateMetadata(SettableMetadata metadata) {
+  Future<FullMetadata> updateMetadata(SettableMetadata metadata) async {
     // ignore: omit_local_variable_types
     final newSettable = _getNewSettableFromFullMetadata(_storage.storedMetadata[_path], metadata);
-    _storage.storedMetadata[_path] = _createFullMetadata(newSettable);
+    _storage.storedMetadata[_path] = await _createFullMetadata(newSettable);
     return Future<FullMetadata>.value(_storage.storedMetadata[_path]);
   }
 
-  FullMetadata _createFullMetadata(SettableMetadata? metadata) {
+  Future<FullMetadata> _createFullMetadata(SettableMetadata? metadata) async {
     // ignore: omit_local_variable_types
     final Map<String, dynamic> newMetadata = metadata?.asMap() ?? <String, dynamic>{};
 
     newMetadata['bucket'] = _storage.storedMetadata[_path]?.bucket ?? bucket;
     newMetadata['fullPath'] = _storage.storedMetadata[_path]?.fullPath ?? fullPath;
     newMetadata['metadataGeneration'] = _storage.storedMetadata[_path]?.metadataGeneration ?? 'metadataGeneration';
-    newMetadata['md5Hash'] = _storage.storedMetadata[_path]?.md5Hash ?? 'md5Hash' ;
+    String? checksum;
+    if (_storage.storedFilesMap[_path] != null) {
+      checksum = (await md5.bind(_storage.storedFilesMap[_path]!.openRead()).first).toString();
+    }
+    newMetadata['md5Hash'] =
+        metadata?.customMetadata?['md5Hash'] ?? _storage.storedMetadata[_path]?.md5Hash ?? checksum ?? 'md5Hash';
+
     newMetadata['metageneration'] = _storage.storedMetadata[_path]?.metadataGeneration ?? 'metageneration';
     newMetadata['name'] = _storage.storedMetadata[_path]?.name ?? name;
     newMetadata['size'] = _storage.storedMetadata[_path]?.size
         ?? _storage.storedDataMap[_path]?.lengthInBytes ?? _storage.storedFilesMap[_path]!.lengthSync();
-    int? timestamp;
-    if (metadata?.customMetadata != null)  {
-      timestamp = int.tryParse(metadata!.customMetadata!['creationTimeMillis'] ?? 'null');
-    }
+    var timestamp = int.tryParse(metadata?.customMetadata?['creationTimeMillis'] ?? 'null');
     newMetadata['creationTimeMillis'] = timestamp ?? _storage.storedMetadata[_path]?.timeCreated?.millisecondsSinceEpoch
         ?? DateTime.now().millisecondsSinceEpoch;
-    if (metadata?.customMetadata != null)  {
-      timestamp = int.tryParse(metadata!.customMetadata!['updatedTimeMillis'] ?? 'null');
-    }
+    timestamp = int.tryParse(metadata?.customMetadata?['updatedTimeMillis'] ?? 'null');
     newMetadata['updatedTimeMillis'] = timestamp ?? DateTime.now().millisecondsSinceEpoch;
     return FullMetadata(newMetadata);
   }

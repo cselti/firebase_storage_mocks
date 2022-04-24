@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_storage_mocks/firebase_storage_mocks.dart';
 import 'package:test/test.dart';
@@ -83,13 +84,12 @@ void main() {
       final storageRef = storage.ref().child(imagefile);
       final image = File(imagefile);
       await storageRef.putFile(image);
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = DateTime.now();
       await storageRef.updateMetadata(SettableMetadata(
         cacheControl: 'public,max-age=300',
         contentType: 'image/png',
         customMetadata: <String, String>{
           'userId': 'ABC123',
-          'updatedTimeMillis': '$now',
         },
       ));
 
@@ -97,21 +97,28 @@ void main() {
       expect(metadata.cacheControl, equals('public,max-age=300'));
       expect(metadata.contentType, equals('image/png'));
       expect(metadata.customMetadata!['userId'], equals('ABC123'));
-      expect(metadata.updated!.millisecondsSinceEpoch, equals(now));
+      expect(metadata.updated, isNotNull);
       expect(metadata.name, equals(storageRef.name));
       expect(metadata.fullPath, equals(storageRef.fullPath));
       expect(metadata.timeCreated, isNotNull);
+      expect(metadata.md5Hash, equals((await md5.bind(File(imagefile).openRead()).first).toString()));
 
       await storageRef.updateMetadata(SettableMetadata(
         cacheControl: 'max-age=60',
         customMetadata: <String, String>{
           'userId': 'ABC123',
+          'md5Hash': 'md5Hash',
+          'creationTimeMillis': '${now.millisecondsSinceEpoch}',
+          'updatedTimeMillis': '${now.millisecondsSinceEpoch}',
         },
       ));
       final metadata2 = await storageRef.getMetadata();
 
       expect(metadata2.cacheControl, equals('max-age=60'));
       expect(metadata2.contentType, equals('image/png'));
+      expect(metadata2.md5Hash, equals('md5Hash'));
+      expect(metadata2.timeCreated, equals(DateTime.fromMillisecondsSinceEpoch(now.millisecondsSinceEpoch)));
+      expect(metadata2.updated, equals(DateTime.fromMillisecondsSinceEpoch(now.millisecondsSinceEpoch)));
     });
   });
 }
