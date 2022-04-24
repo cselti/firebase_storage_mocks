@@ -14,7 +14,7 @@ class MockFirebaseStorage extends Mock implements FirebaseStorage {
 
   @override
   Reference ref([String? path]) {
-    path ??= '/';
+    path ??= '';
     return MockReference(this, path);
   }
 
@@ -51,6 +51,62 @@ class MockUploadTask extends Mock implements UploadTask {
   @override
   Future<S> then<S>(FutureOr<S> Function(TaskSnapshot) onValue,
           {Function? onError}) =>
+      delegate.then(onValue, onError: onError);
+
+  @override
+  Stream<TaskSnapshot> asStream() {
+    return delegate.asStream();
+  }
+
+  @override
+  Future<TaskSnapshot> whenComplete(Function action) {
+    return delegate;
+  }
+
+  @override
+  Future<TaskSnapshot> timeout(Duration timeLimit,
+      {FutureOr<TaskSnapshot> Function()? onTimeout}) {
+    return delegate.timeout(timeLimit, onTimeout: onTimeout);
+  }
+
+  @override
+  Future<TaskSnapshot> catchError(Function onError,
+      {bool Function(Object error)? test}) {
+    return delegate.catchError(onError, test: test);
+  }
+
+  @override
+  Future<bool> cancel() {
+    return Future.value(true);
+  }
+
+  @override
+  Future<bool> resume() {
+    return Future.value(true);
+  }
+
+  @override
+  Future<bool> pause() {
+    return Future.value(true);
+  }
+
+  @override
+  TaskSnapshot get snapshot {
+    return _snapshot;
+  }
+}
+
+class MockDownloadTask extends Mock implements DownloadTask {
+  final Future<TaskSnapshot> delegate;
+  final TaskSnapshot _snapshot;
+
+  MockDownloadTask(reference)
+      : delegate = Future.value(MockTaskSnapshot(reference)),
+        _snapshot = MockTaskSnapshot(reference);
+
+  @override
+  Future<S> then<S>(FutureOr<S> Function(TaskSnapshot) onValue,
+      {Function? onError}) =>
       delegate.then(onValue, onError: onError);
 
   @override

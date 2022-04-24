@@ -5,31 +5,58 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_storage_mocks/firebase_storage_mocks.dart';
 import 'package:test/test.dart';
 
-final filename = 'test/someimage.png';
+final imagefile = 'test/someimage.png';
+final textfile = 'test/sometext.txt';
 
 void main() {
   group('MockFirebaseStorage Tests', () {
 
     test('Puts File', () async {
       final storage = MockFirebaseStorage();
-      final storageRef = storage.ref().child(filename);
-      final image = File(filename);
+      final storageRef = storage.ref('test').child(imagefile.split('/')[1]);
+      final image = File(imagefile);
       final task = storageRef.putFile(image);
       await task;
 
-      expect(task.snapshot.ref.fullPath, equals('gs://some-bucket/$filename'));
-      expect(storage.storedFilesMap.containsKey('/$filename'), isTrue);
+      expect(task.snapshot.ref.fullPath, equals('gs://some-bucket/$imagefile'));
+      expect(storage.storedFilesMap.containsKey('$imagefile'), isTrue);
     });
 
     test('Puts Data', () async {
       final storage = MockFirebaseStorage();
-      final storageRef = storage.ref().child(filename);
+      final storageRef = storage.ref('test').child(imagefile.split('/')[1]);
       final imageData = Uint8List(256);
       final task = storageRef.putData(imageData);
       await task;
 
-      expect(task.snapshot.ref.fullPath, equals('gs://some-bucket/$filename'));
-      expect(storage.storedDataMap.containsKey('/$filename'), isTrue);
+      expect(task.snapshot.ref.fullPath, equals('gs://some-bucket/$imagefile'));
+      expect(storage.storedDataMap.containsKey('$imagefile'), isTrue);
+    });
+
+    test('Gets Data', () async {
+      final storage = MockFirebaseStorage();
+      final storageRef = storage.ref().child(imagefile);
+      final imageData = File(imagefile).readAsBytesSync();
+      await storageRef.putData(imageData);
+      final data = await storageRef.getData();
+      expect(data, equals(imageData));
+    });
+
+    test('Writes file', () async {
+      final storage = MockFirebaseStorage();
+      final storageRef = storage.ref('test');
+      final image = File(imagefile);
+      final text = File(textfile);
+      await storageRef.putFile(image);
+      await storageRef.putFile(text);
+      final targetImage = File('${Directory.systemTemp.path}/$imagefile');
+      final targetText = File('${Directory.systemTemp.path}/$textfile');
+      await storageRef.writeToFile(targetImage);
+      await storageRef.writeToFile(targetText);
+      expect(targetImage.existsSync(), isTrue);
+      expect(targetText.existsSync(), isTrue);
+      expect(targetText.readAsStringSync(), equals('Example test file'));
+      targetImage.parent.deleteSync(recursive: true);
     });
 
     test('Get download url', () async {
@@ -48,8 +75,8 @@ void main() {
 
     test('Set, get and update metadata', () async {
       final storage = MockFirebaseStorage();
-      final storageRef = storage.ref().child(filename);
-      final image = File(filename);
+      final storageRef = storage.ref().child(imagefile);
+      final image = File(imagefile);
       final task = storageRef.putFile(image);
       await task;
       await storageRef.updateMetadata(SettableMetadata(

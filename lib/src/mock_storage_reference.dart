@@ -15,6 +15,7 @@ class MockReference extends Mock implements Reference {
   @override
   Reference child(String path) {
     if (!children.containsKey(path)) {
+      path = _path.endsWith('/') ? path : '/$path';
       children[path] = MockReference(_storage, '$_path$path');
     }
     return children[path]!;
@@ -55,7 +56,8 @@ class MockReference extends Mock implements Reference {
 
   @override
   String get fullPath {
-    return 'gs://${_storage.bucket}$_path';
+    final path =  _path.startsWith('/') ? _path : '/$_path';
+    return 'gs://${_storage.bucket}$path';
   }
 
   @override
@@ -87,7 +89,18 @@ class MockReference extends Mock implements Reference {
 
   @override
   Future<Uint8List> getData([int maxSize = 10485760]) {
+    assert(maxSize > 0);
     return Future.value(_storage.storedDataMap[_path]);
+  }
+
+  @override
+  DownloadTask writeToFile(File file) {
+    final storedFile = _storage.storedFilesMap[_path];
+    if (storedFile != null) {
+      file.createSync(recursive: true);
+      file.writeAsBytesSync(storedFile.readAsBytesSync());
+    }
+    return MockDownloadTask(this);
   }
 
   @override
