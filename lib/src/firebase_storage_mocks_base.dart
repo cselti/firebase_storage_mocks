@@ -11,15 +11,14 @@ class MockFirebaseStorage extends Mock implements FirebaseStorage {
   final Map<String, File> storedFilesMap = {};
   final Map<String, Uint8List> storedDataMap = {};
   final Map<String, FullMetadata> storedMetadata = {};
-  final bool calculateMd5Hash;
   final bool throwsDownloadException;
 
-  MockFirebaseStorage({this.calculateMd5Hash = false, this.throwsDownloadException = false});
+  MockFirebaseStorage({this.throwsDownloadException = false});
 
   @override
   Reference ref([String? path]) {
     path ??= '';
-    return MockReference(this, path, calculateMd5Hash, throwsDownloadException);
+    return MockReference(this, path, throwsDownloadException);
   }
 
   @override

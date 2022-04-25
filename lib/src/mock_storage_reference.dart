@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_storage_mocks/firebase_storage_mocks.dart';
 import 'package:mockito/mockito.dart';
@@ -11,17 +10,16 @@ class MockReference extends Mock implements Reference {
   final MockFirebaseStorage _storage;
   final String _path;
   final Map<String, MockReference> children = {};
-  final bool _calculateMd5Hash;
   final bool _throwsDownloadException;
 
   MockReference(this._storage,
-      [this._path = '', this._calculateMd5Hash = false, this._throwsDownloadException = false]);
+      [this._path = '', this._throwsDownloadException = false]);
 
   @override
   Reference child(String path) {
     if (!children.containsKey(path)) {
       path = _path.endsWith('/') ? path : '/$path';
-      children[path] = MockReference(_storage, '$_path$path', _calculateMd5Hash, _throwsDownloadException);
+      children[path] = MockReference(_storage, '$_path$path', _throwsDownloadException);
     }
     return children[path]!;
   }
@@ -76,13 +74,13 @@ class MockReference extends Mock implements Reference {
       return null;
     } else {
       final sections = _path.split('/');
-      return MockReference(_storage, sections[sections.length - 2], _calculateMd5Hash, _throwsDownloadException);
+      return MockReference(_storage, sections[sections.length - 2], _throwsDownloadException);
     }
   }
 
   @override
   Reference get root {
-    return MockReference(_storage, '/', _calculateMd5Hash, _throwsDownloadException);
+    return MockReference(_storage, '/', _throwsDownloadException);
   }
 
   @override
@@ -122,7 +120,7 @@ class MockReference extends Mock implements Reference {
     return Future<FullMetadata>.value(_storage.storedMetadata[_path]);
   }
 
-  FullMetadata _createFullMetadata(SettableMetadata? metadata, [String? md5hash])  {
+  FullMetadata _createFullMetadata(SettableMetadata? metadata)  {
     // ignore: omit_local_variable_types
     final Map<String, dynamic> newMetadata = metadata?.asMap() ?? <String, dynamic>{};
 
@@ -130,7 +128,7 @@ class MockReference extends Mock implements Reference {
     newMetadata['fullPath'] = _storage.storedMetadata[_path]?.fullPath ?? fullPath;
     newMetadata['metadataGeneration'] = _storage.storedMetadata[_path]?.metadataGeneration ?? 'metadataGeneration';
     newMetadata['md5Hash'] =
-        metadata?.customMetadata?['md5Hash'] ?? md5hash ?? _storage.storedMetadata[_path]?.md5Hash ?? 'md5Hash';
+        metadata?.customMetadata?['md5Hash'] ?? _storage.storedMetadata[_path]?.md5Hash ?? 'md5Hash';
     newMetadata['metageneration'] = _storage.storedMetadata[_path]?.metadataGeneration ?? 'metageneration';
     newMetadata['name'] = _storage.storedMetadata[_path]?.name ?? name;
     newMetadata['size'] = _storage.storedMetadata[_path]?.size
@@ -156,11 +154,6 @@ class MockReference extends Mock implements Reference {
 
   @override
   Future<FullMetadata> getMetadata() async {
-    if (_calculateMd5Hash && _storage.storedFilesMap[_path] != null) {
-      final checksum = (await md5.bind(_storage.storedFilesMap[_path]!.openRead()).first).toString();
-      return Future.value(_createFullMetadata(
-          _getNewSettableFromFullMetadata(_storage.storedMetadata[_path], null), checksum));
-    }
     return Future.value(_storage.storedMetadata[_path]);
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_storage_mocks/firebase_storage_mocks.dart';
 import 'package:test/test.dart';
@@ -78,7 +77,7 @@ void main() {
     });
 
     test('Set, get and update metadata', () async {
-      final storage = MockFirebaseStorage(calculateMd5Hash: true);
+      final storage = MockFirebaseStorage();
       final storageRef = storage.ref().child(imagefile);
       final image = File(imagefile);
       await storageRef.putFile(image);
@@ -99,7 +98,7 @@ void main() {
       expect(metadata.name, equals(storageRef.name));
       expect(metadata.fullPath, equals(storageRef.fullPath));
       expect(metadata.timeCreated, isNotNull);
-      expect(metadata.md5Hash, equals((await md5.bind(File(imagefile).openRead()).first).toString()));
+      expect(metadata.md5Hash, 'md5Hash');
 
       await storageRef.updateMetadata(SettableMetadata(
         cacheControl: 'max-age=60',
